@@ -24,7 +24,7 @@ function Wait-DSCNodeConvergence
 	
 	# 1. Build an Array of Sessions
 	$NewSessionparam = @{
-		ComputerName = $Computer
+		ComputerName = ""
 	}
 	
 	if ($Credential)
@@ -37,12 +37,14 @@ function Wait-DSCNodeConvergence
 	[System.Array]$Output = @()
 	foreach ($Computer in $ComputerName)
 	{
-		$DSCNode = New-Object -TypeName System.Management.Automation.PSCustomObject -Property [Ordered]@{
+		$NewSessionparam.ComputerName = $Computer
+		
+		$DSCNode = New-Object -TypeName PSCustomObject -Property @{
 			ComputerName = $Computer
 			ConvergeAfterTime = $DateTime
 			StartTime = (Get-Date)
 			CapturedEndTime = ""
-			State = ""
+			Status = ""
 			DurationMinutes = ""
 			SessionInfo = (New-PSSession @NewSessionparam -ErrorAction SilentlyContinue)
 		}
@@ -52,7 +54,7 @@ function Wait-DSCNodeConvergence
 	
 	if (($Output.Where{
 				$PSitem.SessionInfo.State -eq "Opened"
-			}) -eq $Output.Count)
+			}.Count) -eq $Output.Count)
 	{
 		
 		do
@@ -60,13 +62,13 @@ function Wait-DSCNodeConvergence
 			# Here is where we run the Invoke-Command to DSCConfigurationStatus and update the object
 			Write-Verbose -Message "Waiting for for update ..."
 			
-			Start-Sleep -Seconds 60
+			Start-Sleep -Seconds 5
 			
 			foreach ($DSCNode in $Output)
 			{
 				if (($DSCNode.Status -ne "Success") -and ($DSCNode.StartDate -lt $DateTime))
 				{
-					$StatusData = Invoke-Command -SessionName $DSCNode.SessionInfo -ScriptBlock {
+					$StatusData = Invoke-Command -Session $DSCNode.SessionInfo -ScriptBlock {
 						Get-DscConfigurationStatus
 					} -ErrorAction SilentlyContinue # CONSIDER ERROR VARIABLE SO IF SERVER REBOOTED NEED TO REBUILD SESSION
 					
@@ -93,7 +95,7 @@ function Wait-DSCNodeConvergence
 					}
 					else
 					{
-						$DSCNode.State = "Not Reachable"
+						$DSCNode.Status = "Not Reachable"
 						# NOW NEED TO REBUILD THE SESSION
 						
 						do
@@ -114,8 +116,8 @@ function Wait-DSCNodeConvergence
 		}
 		
 		until (($Output.Where{
-					$PSitem.State -eq "Success"
-				}) -eq $Output.Count) # Update "Success" with real value
+					$PSitem.Status -eq "Success"
+				}.Count) -eq $Output.Count) # Update "Success" with real value
 		
 		
 		# 3. Close all sessions
@@ -124,13 +126,12 @@ function Wait-DSCNodeConvergence
 			Remove-PSSession -Session $DSCNode.SessionInfo
 		}
 		
-		Write-Verbose -Message "Convergence is complete"
-		return $output
-		
+		Write-Verbose -Message "Convergence is complete"	
 	}
 	else
 	{
-		Write-Verbose -Message "Could not Open all session - Convergence monioring stopped"	
+		Write-Verbose -Message "Could not Open all session - Convergence monioring stopped"
 	}
 	
+	return $output
 }
