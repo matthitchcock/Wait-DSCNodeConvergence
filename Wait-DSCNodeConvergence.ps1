@@ -4,7 +4,7 @@
 	[OutputType([array])]
 	param
 	(
-		[string]$ComputerName,
+		[string[]]$ComputerName,
 		[PScredential]$Credential,
 		[datetime]$DateTime = (Get-Date),
 		[Int]$StatusWaitIntervalSeconds = '5'
@@ -111,7 +111,12 @@
 			}
 		}
 		
-		Write-Verbose $Output
+		# Rudimentary output for experimentation
+		Write-Output ""
+		Write-Output ""
+		Write-Output $Output | Format-Table -AutoSize
+		Write-Output ""
+		Write-Output ""
 	}
 	
 	until (($Output.Where{
