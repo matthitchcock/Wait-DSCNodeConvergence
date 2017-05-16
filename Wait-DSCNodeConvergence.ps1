@@ -86,11 +86,17 @@
 							$DSCNode.Status = $StatusData.Status
 						}
 						
-						if ($DSCNode.Status -eq "Success")
+						if ($StatusData.Status -eq "Success")
 						{
-							# Set the End time and average time, etc.
-							$DSCNode.CapturedEndTime = Get-Date
-							$DSCNode.DurationMinutes = ($DSCNode.CapturedEndTime - $DateTime).Minutes
+							if ($StatusData.RebootRequested -eq $true)
+							{
+								$DSCNode.Status = "Awaiting Reboot"
+							}
+							else {
+								# Set the End time and average time, etc.
+								$DSCNode.CapturedEndTime = Get-Date
+								$DSCNode.DurationMinutes = ($DSCNode.CapturedEndTime - $DateTime).Minutes
+							}
 						}
 					}
 				}
